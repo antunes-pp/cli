@@ -5,23 +5,30 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/antunes-pp/cli/internal/core"
-	"github.com/antunes-pp/cli/internal/core/port"
 	"io"
 	"log"
 	"net/http"
+
+	"github.com/antunes-pp/cli/internal/core"
+	"github.com/antunes-pp/cli/internal/core/port"
 )
 
-type RegisterUserUseCase struct{}
+type RegisterUserUseCase struct {
+	httpClient port.HttpClient
+}
 
-func NewRegisterUserUserCase() *RegisterUserUseCase {
-	r := RegisterUserUseCase{}
+func NewRegisterUserUserCase(client port.HttpClient) *RegisterUserUseCase {
+	r := RegisterUserUseCase{
+		httpClient: client,
+	}
 
 	return &r
 }
 
-func (r *RegisterUserUseCase) Execute(input port.InputRegisterUser, isDev bool) error {
+func (it *RegisterUserUseCase) Execute(input port.InputRegisterUser, isDev bool) error {
 	user := NewUser(input.GetName(), input.GetEmail(), input.GetSquads())
+
+	log.Println(user)
 
 	if err := user.Validate(); err != nil {
 		return err
@@ -37,8 +44,6 @@ func (r *RegisterUserUseCase) Execute(input port.InputRegisterUser, isDev bool) 
 		url = core.MS_PROD + "/user"
 	}
 
-	client := http.Client{}
-
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(j))
 
 	if err != nil {
@@ -47,7 +52,7 @@ func (r *RegisterUserUseCase) Execute(input port.InputRegisterUser, isDev bool) 
 
 	req.Header.Set("Content-Type", "application/json")
 
-	res, err := client.Do(req)
+	res, err := it.httpClient.Do(req)
 
 	if err != nil {
 		return err
